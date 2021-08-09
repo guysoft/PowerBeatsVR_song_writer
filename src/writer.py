@@ -84,40 +84,41 @@ class Map():
     def get_powerbeatsvr_notes(self, bs_note_data, level):
         
         current_beat = None
+        # TODO: Add subbeats - fraction beat numbers
         for note in bs_note_data["_notes"]:
-            if current_beat is None or note["_time"] != current_beat:
-                if current_beat is not None:
-                    self.add_beat(level, beat_no=current_beat, actions=actions)
-                current_beat = note["_time"]
-                # new beat
-                actions = []
-            if note["_type"] == NOTE_TYPE["BOMB"]:
-                actions.append({
-                    "position" : line_index_layer_to_position(note),
-                    "type": 0,
-                    "depth": 0,
-                    "action" : "BallObstacle"})
-            else:
+            if note["_time"] % 1 == 0.0:
+                if (current_beat is None or note["_time"] != current_beat):
+                    if current_beat is not None:
+                        self.add_beat(level, beat_no=int(current_beat), actions=actions)
+                    current_beat = note["_time"]
+                    # new beat
+                    actions = []
+                if note["_type"] == NOTE_TYPE["BOMB"]:
+                    actions.append({
+                        "position" : line_index_layer_to_position(note),
+                        "type": 0,
+                        "depth": 0,
+                        "action" : "BallObstacle"})
+                else:
+                    
+                    actions.append({
+                        "position" : line_index_layer_to_position(note),
+                        "type": 0,
+                        "depth": 0,
+                        "action" : "NormalBall"})
+                    #actions.append({"position":0,
+                                    #"action": 0,
+                                    #"type": 0,
+                                    #"depth": 0,
+                                    #})
+                    
+                 
                 
-                actions.append({
-                    "position" : line_index_layer_to_position(note),
-                    "type": 0,
-                    "depth": 0,
-                    "action" : "NormalBall"})
-                #actions.append({"position":0,
-                                #"action": 0,
-                                #"type": 0,
-                                #"depth": 0,
-                                #})
-                
-            
-            # note = 
-            
-            notes = []
-            events = []
-            obstacles = []
+                notes = []
+                events = []
+                obstacles = []
         # Add last beat
-        self.add_beat(level, beat_no=current_beat, actions=actions)
+        self.add_beat(level, beat_no=int(current_beat), actions=actions)
 
         #actions = [
             #{
@@ -131,7 +132,6 @@ class Map():
                 #"action" : "BallObstacle"
             #}
         #]
-        self.add_beat(level, beat_no=note["_time"], actions=actions)
         return
         
 
