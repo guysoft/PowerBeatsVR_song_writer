@@ -180,7 +180,9 @@ if __name__ == "__main__":
     
     ensure_dir(out_folder)
     
-    bs_map_path = os.path.join(bs_folder, 'ExpertPlus.dat')
+    bs_map_easy_path = os.path.join(bs_folder, 'Easy.dat')
+    bs_map_hard_path = os.path.join(bs_folder, 'Hard.dat')
+    bs_map_expert_plus_path = os.path.join(bs_folder, 'ExpertPlus.dat')
     
     
     bs_data = bs_lib.get_data(bs_info_path)
@@ -190,9 +192,16 @@ if __name__ == "__main__":
     
     a = Map(name=bs_data["name"], author=bs_data["author"], bpm=bs_data["bpm"], offset=bs_data["offset"])
     
-    bs_note_data = bs_lib.get_map_data(bs_map_path)
+    levels_arrange = {bs_map_easy_path: "Beginner",
+                      bs_map_hard_path: "Advanced",
+                      bs_map_expert_plus_path: "Expert"}
     
-    a.get_powerbeatsvr_notes(bs_note_data, "Advanced")
+    for key in levels_arrange.keys():
+        bs_map_path = key
+        difficulty = levels_arrange[key]
+        bs_note_data = bs_lib.get_map_data(bs_map_path)
+        a.get_powerbeatsvr_notes(bs_note_data, difficulty)
+        
     # a.get_powerbeatsvr_notes(bs_note_data, "Expert")
     
     """
