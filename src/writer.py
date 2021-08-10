@@ -66,6 +66,13 @@ def add_beat(data, difficulty):
     return data
 """
 
+def convert_action_type(note):
+    if note["_type"] == NOTE_TYPE["BOMB"]:
+        action = "BallObstacle"
+    else:
+        action = "NormalBall"
+    return action
+
 class Map():
     def __init__(self, name, author="unknown", bpm=140, offset=0):
         self.data = create(name, author=author, bpm=bpm, offset=offset)
@@ -89,28 +96,45 @@ class Map():
             if note["_time"] % 1 == 0.0:
                 if (current_beat is None or note["_time"] != current_beat):
                     if current_beat is not None:
-                        self.add_beat(level, beat_no=int(current_beat), actions=actions)
+                        self.add_beat(level, beat_no=int(current_beat), actions=actions, sub_beats=sub_beats)
                     current_beat = note["_time"]
                     # new beat
                     actions = []
-                if note["_type"] == NOTE_TYPE["BOMB"]:
-                    actions.append({
-                        "position" : line_index_layer_to_position(note),
-                        "type": 0,
-                        "depth": 0,
-                        "action" : "BallObstacle"})
-                else:
+                    sub_beats = []
                     
-                    actions.append({
-                        "position" : line_index_layer_to_position(note),
-                        "type": 0,
-                        "depth": 0,
-                        "action" : "NormalBall"})
-                    #actions.append({"position":0,
-                                    #"action": 0,
-                                    #"type": 0,
-                                    #"depth": 0,
-                                    #})
+                actions.append({
+                    "position" : line_index_layer_to_position(note),
+                    "type": 0,
+                    "depth": 0,
+                    "action" : convert_action_type(note)})
+                
+            else:
+                # Handle sub beats
+                
+                offset = note["_time"] - current_beat
+                position = line_index_layer_to_position(note)
+                    
+                for i, subbeat_existing in enumerate(sub_beats):
+                    if subbeat_existing["offset"] == offset:
+                        sub_beats[i]["actions"].append(
+                            {
+                            "position" : position,
+                            "action" : convert_action_type(note)
+                            }
+                            )
+                else:
+                    subbeat = {
+                        "offset" : offset,
+                        "actions" : [
+                            {
+                                "position" : position,
+                                "action" : convert_action_type(note)
+                            }
+                            ]
+                            }
+                    
+                    sub_beats.append(subbeat)
+                    
                     
                  
                 
@@ -118,7 +142,7 @@ class Map():
                 events = []
                 obstacles = []
         # Add last beat
-        self.add_beat(level, beat_no=int(current_beat), actions=actions)
+        self.add_beat(level, beat_no=int(current_beat), actions=actions, sub_beats=sub_beats)
 
         #actions = [
             #{
@@ -136,7 +160,7 @@ class Map():
         
 
 def get_beat_number(a, number, difficulty):
-    for i, beat in enummerate(a.data[difficulty]["beats"]):
+    for i, beat in enumerate(a.data[difficulty]["beats"]):
         if beat[beatNo] == number:
             return i
     return None
