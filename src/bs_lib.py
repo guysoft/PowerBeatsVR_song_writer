@@ -25,10 +25,10 @@ def get_data(bs_info_path):
 def line_index_layer_to_position(note):
     # layer 0-2
     # ndex 0-3
-    # posy = 0.5 - 1.5
-    # posx = -1.5 - 1.5
-    position_x = -1.5  + 1 * note["_lineIndex"]
-    position_y = -0.5  + 1 * note["_lineLayer"]
+    # posy = 0.5 - 1.3
+    # posx = -1.3 - 1.3
+    position_x = -1.3  + 0.8 * note["_lineIndex"]
+    position_y = -0.5  + 0.8 * note["_lineLayer"]
     return [position_x, position_y]
 
 def get_map_data(bs_map_path):
