@@ -4,7 +4,10 @@ import sys
 import shutil
 import os
 import bs_lib
-from bs_lib import NOTE_TYPE, line_index_layer_to_position
+from bs_lib import NOTE_TYPE, OBSTACLE_TYPE, line_index_layer_to_position, obstacle_line_index_layer_to_position
+
+POWER_BEATS_VR_OBSTACLE_TYPES = {"FULL_HEIGHT": 0, "CROUCH": 7}
+
 
 def ensure_dir(d, chmod=0o777):
     """
@@ -41,31 +44,6 @@ def create(name, author="unknown", bpm=140, offset=0):
     }
     return data
 
-"""
-def add_beat(data, difficulty):
-    beat = {
-        "beatNo" : 4,
-        "beatLabel" : "JUMP LEFT/RIGHT [4] Half: False Type: Spike Obstacle Rep: 0 Adv: 1 Gap: 1,1,0",
-        "actions" : [
-          {
-            "position" : [-0.639522075653076,-1.29999995231628],
-            "action" : "WallObstacle",
-            "type" : 0,
-            "depth" : 0.100000001490116
-          },
-          {
-            "position" : [0.699999988079071,0.300000011920929],
-            "action" : "BallObstacle"
-          }
-        ],
-        "subBeats" : [
-        ]
-        }
-    
-    data[difficulty]["beats"].append(beat)
-    return data
-"""
-
 def convert_action_type(note):
     if note["_type"] == NOTE_TYPE["BOMB"]:
         action = "BallObstacle"
@@ -86,12 +64,73 @@ class Map():
             }
         self.data[difficulty]["beats"].append(beat)
         return
+    
+    def get_beat(self, number, difficulty):
+        if number is None:
+            return None
+        for i, beat in enumerate(self.data[difficulty]["beats"]):
+            if beat["beatNo"] == int(number):
+                return i
+        return None
+    
+    def add_obstacle(self, difficulty, obstacle):
+        current_time = obstacle["_time"]
+        current_beat = int(current_time)
         
+        # Handle intiger beat, goes in actions
+        beat_index = self.get_beat(current_beat, difficulty)
+            
+        if beat_index is None:
+            self.add_beat(difficulty, beat_no=current_beat, actions=[], sub_beats=[])
+        beat_index = self.get_beat(current_beat, difficulty)
+        
+        
+        # Get obstacle data
+        x_position = obstacle["_lineIndex"]
+        bs_type = obstacle["_type"]
+        depth = obstacle["_duration"]
+        width = obstacle["_width"]
+        # TODO figure out convert
+        # y_position = x_position + width
+        
+        if bs_type == OBSTACLE_TYPE["CROUCH"]:
+            power_beats_vr_type = POWER_BEATS_VR_OBSTACLE_TYPES["CROUCH"]
+            # Taken from level editor, not sure if there are other ways to generate
+            # hard coded because anyway in beat saber its _lineIndex and width 4
+            position = [0,0.472493290901184]
+        
+        elif bs_type == OBSTACLE_TYPE["FULL_HEIGHT"]:
+            power_beats_vr_type = POWER_BEATS_VR_OBSTACLE_TYPES["FULL_HEIGHT"]
+            
+            position = obstacle_line_index_layer_to_position(obstacle)
+        else:
+            print("ERROR: Unknown wall type")
+            exit(1)
+            
+        if current_time % 1 == 0.0:
+            self.data[difficulty]["beats"][beat_index]["actions"].append({
+                "position" : position,
+                "action" : "WallObstacle",
+                "type" : power_beats_vr_type,
+                "depth" : depth
+                })
+        else:
+            # TODO: ADd sub beat obstacles
+            pass
+            #self.data[difficulty]["beats"][beat_index]["subBeats"].append({
+                #"position" : position,
+                #"action" : "WallObstacle",
+                #"type" : power_beats_vr_type,
+                #"depth" : depth
+                #})
+        
+        return
+
+                
         
     def get_powerbeatsvr_notes(self, bs_note_data, level):
         
         current_beat = None
-        # TODO: Add subbeats - fraction beat numbers
         for note in bs_note_data["_notes"]:
             if note["_time"] % 1 == 0.0:
                 if (current_beat is None or note["_time"] != current_beat):
@@ -157,17 +196,13 @@ class Map():
             #}
         #]
         return
-        
-
-def get_beat_number(a, number, difficulty):
-    for i, beat in enumerate(a.data[difficulty]["beats"]):
-        if beat[beatNo] == number:
-            return i
-    return None
+    
+    def get_powerbeatsvr_obstacles(self, bs_obstacle_data, level):
+        for obstacle in bs_note_data["_obstacles"]:
+            # print(obstacle)
+            self.add_obstacle(level, obstacle)
     
 if __name__ == "__main__":
-    
-    
     # bs_folder = "/home/guy/workspace/PowerBeatsVR/beatsaver_pack/Jaroslav Beck - Beat Saber (Built in)"
     bs_folder = sys.argv[1]
     out_folder = sys.argv[2]
@@ -201,24 +236,7 @@ if __name__ == "__main__":
         difficulty = levels_arrange[key]
         bs_note_data = bs_lib.get_map_data(bs_map_path)
         a.get_powerbeatsvr_notes(bs_note_data, difficulty)
-        
-    # a.get_powerbeatsvr_notes(bs_note_data, "Expert")
-    
-    """
-    # TODO ADD WALLS
-    current_beat = None
-    for obstacle in bs_note_data["_obstacles"]:
-        if current_beat is None or note["_time"] != current_beat:
-            if current_beat is not None:
-                beat_index = get_beat_number(a, note["_time"], "Advanced")
-                if beat_index is not None:
-                    a["Advanced"]["beats"][beat_index]["actions"].append({"WallObstacle"})
-                self.add_beat(level, beat_no=current_beat, actions=actions)
-            current_beat = note["_time"]
-        print(obstacle.keys())
-    """
-    
-    # _notes', u'_events', u'', u'_obstacles
+        a.get_powerbeatsvr_obstacles(bs_note_data, difficulty)
     
     with open(out_path,"w") as w:
         json.dump(a.data, w, indent=4, sort_keys=True)
