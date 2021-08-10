@@ -8,3 +8,5 @@ Currently does not work. Because something in the PowerBeatsVR format makes no s
 ```
 python3 ./writer.py [beat saber folder] [output folder (created)]
 ```
+
+Place the generated json in the PowerBeatsVR layouts folder, and play the ogg file in the game.
