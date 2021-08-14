@@ -3,8 +3,8 @@ import json
 import sys
 import shutil
 import os
-import bs_lib
-from bs_lib import NOTE_TYPE, OBSTACLE_TYPE, line_index_layer_to_position, obstacle_line_index_layer_to_position
+import powerbeatsvr.bs_lib as bs_lib
+from powerbeatsvr.bs_lib import NOTE_TYPE, OBSTACLE_TYPE, line_index_layer_to_position, obstacle_line_index_layer_to_position
 
 POWER_BEATS_VR_OBSTACLE_TYPES = {"FULL_HEIGHT": 0, "CROUCH": 7}
 
@@ -260,6 +260,20 @@ def convert_beat_saber_folder(bs_folder, out_folder, difficulty_list=["Easy", "H
         json.dump(a.data, w, indent=4, sort_keys=True)
     shutil.copy(bs_song_file, out_song_path)
     return
+
+def run():
+    import argparse
+        import argparse
+    parser = argparse.ArgumentParser(add_help=True,
+                                     description="Convert beast saver custom map in to a powerbeastsvr one")
+
+    parser.add_argument('power_beats_vr_folder', type=str, help='zip of a beats saber folder')
+    parser.add_argument('output_folder', type=str, help='Folder to output the PowerBeatsVR json map and song file')
+    # parser.add_argument('difficulty', type=str, help='Which level difficulty to use eg. Easty,Hard,ExpertPlus (default is exmaple)')
+    args = parser.parse_args()
+    
+    
+    convert_beat_saber_folder(args.power_beats_vr_folder, args.output_folder, ["Easy", "Hard", "ExpertPlus"])
 
 if __name__ == "__main__":
     convert_beat_saber_folder(sys.argv[1], sys.argv[2], ["Easy", "Hard", "ExpertPlus"])

@@ -6,7 +6,8 @@ Currently does not work. Because something in the PowerBeatsVR format makes no s
 ## Usage
 
 ```
-python3 ./writer.py [beat saber folder] [output folder (created)]
+pip3 install powerbeatsvr
+powerbeatsvr [beat saber folder] [output folder (created)]
 ```
 
 Place the generated json in the PowerBeatsVR layouts folder, and play the ogg file in the game.
