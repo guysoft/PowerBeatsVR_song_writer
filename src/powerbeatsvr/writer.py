@@ -263,7 +263,6 @@ def convert_beat_saber_folder(bs_folder, out_folder, difficulty_list=["Easy", "H
 
 def run():
     import argparse
-        import argparse
     parser = argparse.ArgumentParser(add_help=True,
                                      description="Convert beast saver custom map in to a powerbeastsvr one")
 
