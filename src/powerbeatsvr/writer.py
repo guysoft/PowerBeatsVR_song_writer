@@ -252,7 +252,7 @@ def convert_beat_saber_folder(bs_folder, out_folder, difficulty_list=["Easy", "H
     shutil.copy(bs_song_file, out_song_path)
     return
 
-def convert_beat_saber_zip(bs_zip, out_folder, difficulty_list=["Easy", "Hard", "ExpertPlus"]):
+def convert_beat_saber_zip(bs_zip, out_folder):
     levels = ["Easy", "Easy", "Hard", "Expert", "ExpertPlus"]
     
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -292,7 +292,7 @@ def run():
     args = parser.parse_args()
     
     
-    convert_beat_saber_zip(args.convert_beat_saber_zip, args.output_folder, ["Easy", "Hard", "ExpertPlus"])
+    convert_beat_saber_zip(args.convert_beat_saber_zip, args.output_folder)
 
 if __name__ == "__main__":
     convert_beat_saber_folder(sys.argv[1], sys.argv[2], ["Easy", "Hard", "ExpertPlus"])
