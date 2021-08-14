@@ -72,7 +72,16 @@ class Map():
             if beat["beatNo"] == int(number):
                 return i
         return None
-    
+
+
+    def get_sub_beat(self, difficulty, beat_index, offset):
+        if beat_index is None:
+            return None
+        for i, sub_beat in enumerate(self.data[difficulty]["beats"][beat_index]["subBeats"]):
+            if sub_beat["offset"] == offset:
+                return i
+        return None
+
     def add_obstacle(self, difficulty, obstacle):
         current_time = obstacle["_time"]
         current_beat = int(current_time)
@@ -90,14 +99,13 @@ class Map():
         bs_type = obstacle["_type"]
         depth = obstacle["_duration"]
         width = obstacle["_width"]
-        # TODO figure out convert
         # y_position = x_position + width
         
         if bs_type == OBSTACLE_TYPE["CROUCH"]:
             power_beats_vr_type = POWER_BEATS_VR_OBSTACLE_TYPES["CROUCH"]
             # Taken from level editor, not sure if there are other ways to generate
             # hard coded because anyway in beat saber its _lineIndex and width 4
-            position = [0,0.472493290901184]
+            position = [0, 0.472493290901184]
         
         elif bs_type == OBSTACLE_TYPE["FULL_HEIGHT"]:
             power_beats_vr_type = POWER_BEATS_VR_OBSTACLE_TYPES["FULL_HEIGHT"]
@@ -115,15 +123,23 @@ class Map():
                 "depth" : depth
                 })
         else:
-            # TODO: ADd sub beat obstacles
-            pass
-            #self.data[difficulty]["beats"][beat_index]["subBeats"].append({
-                #"position" : position,
-                #"action" : "WallObstacle",
-                #"type" : power_beats_vr_type,
-                #"depth" : depth
-                #})
-        
+            offset = current_time - current_beat
+            index_of_sub_beat = self.get_sub_beat(difficulty, beat_index, offset)
+            if index_of_sub_beat is None:
+                # Create new sub beat
+                subbeat = {
+                    "offset" : offset,
+                    "actions" : []
+                    }
+            index_of_sub_beat = self.get_sub_beat(difficulty, beat_index, offset)
+                
+            self.data[difficulty]["beats"][beat_index]["subBeats"][index_of_sub_beat]["actions"].append({
+                "position" : position,
+                "action" : "WallObstacle",
+                "type" : power_beats_vr_type,
+                "depth" : depth
+                })
+
         return
 
                 
