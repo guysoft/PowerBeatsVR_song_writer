@@ -3,7 +3,10 @@ import json
 import sys
 import shutil
 import os
+from pyunpack import Archive
+import tempfile
 import powerbeatsvr.bs_lib as bs_lib
+import glob
 from powerbeatsvr.bs_lib import NOTE_TYPE, OBSTACLE_TYPE, line_index_layer_to_position, obstacle_line_index_layer_to_position
 
 POWER_BEATS_VR_OBSTACLE_TYPES = {"FULL_HEIGHT": 0, "CROUCH": 7}
@@ -131,6 +134,7 @@ class Map():
                     "offset" : offset,
                     "actions" : []
                     }
+                self.data[difficulty]["beats"][beat_index]["subBeats"].append(subbeat)
             index_of_sub_beat = self.get_sub_beat(difficulty, beat_index, offset)
                 
             self.data[difficulty]["beats"][beat_index]["subBeats"][index_of_sub_beat]["actions"].append({
@@ -142,81 +146,69 @@ class Map():
 
         return
 
-                
+    def add_note(self, difficulty, note):
+        current_time = note["_time"]
+        current_beat = int(current_time)
+        
+        # Handle intiger beat, goes in actions
+        beat_index = self.get_beat(current_beat, difficulty)
+            
+        if beat_index is None:
+            self.add_beat(difficulty, beat_no=current_beat, actions=[], sub_beats=[])
+        beat_index = self.get_beat(current_beat, difficulty)
+        
+        
+        # Get obstacle data
+        x_position = note["_lineIndex"]
+        bs_type = note["_type"]
+        action = convert_action_type(note)
+        position = line_index_layer_to_position(note)
+            
+        if current_time % 1 == 0.0:
+            self.data[difficulty]["beats"][beat_index]["actions"].append({
+                "position" : position,
+                "action" : action
+                })
+        else:
+            offset = current_time - current_beat
+            index_of_sub_beat = self.get_sub_beat(difficulty, beat_index, offset)
+            if index_of_sub_beat is None:
+                # Create new sub beat
+                subbeat = {
+                    "offset" : offset,
+                    "actions" : []
+                    }
+                self.data[difficulty]["beats"][beat_index]["subBeats"].append(subbeat)
+            index_of_sub_beat = self.get_sub_beat(difficulty, beat_index, offset)
+            
+            self.data[difficulty]["beats"][beat_index]["subBeats"][index_of_sub_beat]["actions"].append({
+                "position" : position,
+                "action" : action
+                })
+
+        return                
         
     def get_powerbeatsvr_notes(self, bs_note_data, level):
-        
-        current_beat = None
         for note in bs_note_data["_notes"]:
-            if note["_time"] % 1 == 0.0:
-                if (current_beat is None or note["_time"] != current_beat):
-                    if current_beat is not None:
-                        self.add_beat(level, beat_no=int(current_beat), actions=actions, sub_beats=sub_beats)
-                    current_beat = note["_time"]
-                    # new beat
-                    actions = []
-                    sub_beats = []
-                    
-                actions.append({
-                    "position" : line_index_layer_to_position(note),
-                    "type": 0,
-                    "depth": 0,
-                    "action" : convert_action_type(note)})
-                
-            else:
-                # Handle sub beats
-                
-                offset = note["_time"] - current_beat
-                position = line_index_layer_to_position(note)
-                    
-                for i, subbeat_existing in enumerate(sub_beats):
-                    if subbeat_existing["offset"] == offset:
-                        sub_beats[i]["actions"].append(
-                            {
-                            "position" : position,
-                            "action" : convert_action_type(note)
-                            }
-                            )
-                else:
-                    subbeat = {
-                        "offset" : offset,
-                        "actions" : [
-                            {
-                                "position" : position,
-                                "action" : convert_action_type(note)
-                            }
-                            ]
-                            }
-                    
-                    sub_beats.append(subbeat)
-                    
-                    
-                 
-                
-                notes = []
-                events = []
-                obstacles = []
-        # Add last beat
-        self.add_beat(level, beat_no=int(current_beat), actions=actions, sub_beats=sub_beats)
-
-        #actions = [
-            #{
-                #"position" : [-0.639522075653076,-1.29999995231628],
-                #"action" : "WallObstacle",
-                #"type" : 0,
-                #"depth" : 0.100000001490116
-            #},
-            #{
-                #"position" : [0.699999988079071,0.300000011920929],
-                #"action" : "BallObstacle"
-            #}
-        #]
+            self.add_note(level, note)
         return
     
     def get_powerbeatsvr_obstacles(self, bs_obstacle_data, level):
         for obstacle in bs_obstacle_data["_obstacles"]:
             # print(obstacle)
             self.add_obstacle(level, obstacle)
+            
+def get_bs_info_path(folder):
+    options = ["Info.dat", "info.dat"]
+    for option in options:
+        if os.path.isfile(os.path.join(folder, option)):
+            return os.path.join(folder, option)
+        
+def get_bs_song_path(folder):
+    for song_file in glob.glob(os.path.join(folder, "*.ogg")):
+        return song_file
+    for song_file in glob.glob(os.path.join(folder, "*.egg")):
+        return song_file
     
 def convert_beat_saber_folder(bs_folder, out_folder, difficulty_list=["Easy", "Hard", "ExpertPlus"]):
     # bs_folder = "/home/guy/workspace/PowerBeatsVR/beatsaver_pack/Jaroslav Beck - Beat Saber (Built in)"
@@ -225,9 +217,8 @@ def convert_beat_saber_folder(bs_folder, out_folder, difficulty_list=["Easy", "H
     advanced = difficulty_list[1] + ".dat"
     expert = difficulty_list[2] + ".dat"
     
-    
-    bs_info_path = os.path.join(bs_folder, 'Info.dat')
-    bs_song_file = os.path.join(bs_folder, 'song.ogg')
+    bs_info_path = get_bs_info_path(bs_folder)
+    bs_song_file = get_bs_song_path(bs_folder)
     
     # out_folder = "/tmp/out"
     
@@ -261,18 +252,47 @@ def convert_beat_saber_folder(bs_folder, out_folder, difficulty_list=["Easy", "H
     shutil.copy(bs_song_file, out_song_path)
     return
 
+def convert_beat_saber_zip(bs_zip, out_folder, difficulty_list=["Easy", "Hard", "ExpertPlus"]):
+    levels = ["Easy", "Easy", "Hard", "Expert", "ExpertPlus"]
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        print("Temp folder: " + tmpdir)
+        Archive(bs_zip).extractall(tmpdir)
+        print(os.listdir(tmpdir))
+        avilable_levels = []
+        for file_path in os.listdir(tmpdir):
+            if file_path[:-4] in levels:
+                avilable_levels.append(file_path[:-4])
+                
+        if len(avilable_levels) == 0:
+            raise Exception("No levels found in package")
+        
+        if len(avilable_levels) == 1:
+            difficulty_list = [avilable_levels[0], avilable_levels[0], avilable_levels[0]]
+        elif len(avilable_levels) == 2:
+            difficulty_list = [avilable_levels[0], avilable_levels[1], avilable_levels[1]]
+        elif len(avilable_levels) == 3:
+            difficulty_list = avilable_levels
+        else:
+            # More than 3
+            difficulty_list = [avilable_levels[0], avilable_levels[1], avilable_levels[2]]
+            
+        convert_beat_saber_folder(tmpdir, out_folder, difficulty_list)
+    
+    return
+
 def run():
     import argparse
     parser = argparse.ArgumentParser(add_help=True,
                                      description="Convert beast saver custom map in to a powerbeastsvr one")
 
-    parser.add_argument('power_beats_vr_folder', type=str, help='zip of a beats saber folder')
+    parser.add_argument('convert_beat_saber_zip', type=str, help='zip file of a BeatSaber song map')
     parser.add_argument('output_folder', type=str, help='Folder to output the PowerBeatsVR json map and song file')
     # parser.add_argument('difficulty', type=str, help='Which level difficulty to use eg. Easty,Hard,ExpertPlus (default is exmaple)')
     args = parser.parse_args()
     
     
-    convert_beat_saber_folder(args.power_beats_vr_folder, args.output_folder, ["Easy", "Hard", "ExpertPlus"])
+    convert_beat_saber_zip(args.convert_beat_saber_zip, args.output_folder, ["Easy", "Hard", "ExpertPlus"])
 
 if __name__ == "__main__":
     convert_beat_saber_folder(sys.argv[1], sys.argv[2], ["Easy", "Hard", "ExpertPlus"])
