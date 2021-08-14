@@ -1,0 +1,13 @@
+version: '3.6'
+
+services:
+  powerbeatsvr:
+    build:
+        context: .
+    #image: guysoft/custompios-usage-statistics
+    container_name: powerbeatsvr
+    restart: always
+    tty: true
+    ports:
+      - "80"
+    #entrypoint: /bin/sh

@@ -1,0 +1,21 @@
+{% extends "bootstrap/base.html" %}
+{% block title %}BeatSaber to PowerBeatsVR converter{% endblock %}
+
+{% block navbar %}
+<div class="navbar navbar-fixed-top">
+  <!-- ... -->
+</div>
+{% endblock %}
+
+{% block content %}
+     <div class="container text-center d-flex align-items-center justify-content-center">
+     <h1>BeatSaber to PowerBeatsVR Converter</h1><br/>
+     <br/>
+     <h4>Download the song and json file, place the json file in your PowerBeatsVR folder, play the song :)</h4><br/>
+     <h3><a href="{{ song_url }}" download>Download song</a></h3><br/>
+     <h3><a href="{{ json_url }}" download>Download Map JSON</a></h3><br/>
+     <br/><br/><br/><br/><br/>
+     <h4><a href="/">Back To Upload</a></h4>
+     <br/>
+    </div>
+{% endblock %}

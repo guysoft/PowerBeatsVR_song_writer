@@ -250,7 +250,7 @@ def convert_beat_saber_folder(bs_folder, out_folder, difficulty_list=["Easy", "H
     with open(out_path,"w") as w:
         json.dump(a.data, w, indent=4, sort_keys=True)
     shutil.copy(bs_song_file, out_song_path)
-    return
+    return bs_data["name"]
 
 def convert_beat_saber_zip(bs_zip, out_folder):
     levels = ["Easy", "Easy", "Hard", "Expert", "ExpertPlus"]
@@ -277,9 +277,9 @@ def convert_beat_saber_zip(bs_zip, out_folder):
             # More than 3
             difficulty_list = [avilable_levels[0], avilable_levels[1], avilable_levels[2]]
             
-        convert_beat_saber_folder(tmpdir, out_folder, difficulty_list)
+        return_value = convert_beat_saber_folder(tmpdir, out_folder, difficulty_list)
     
-    return
+    return return_value
 
 def run():
     import argparse

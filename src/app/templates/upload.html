@@ -1,0 +1,27 @@
+{% extends "bootstrap/base.html" %}
+{% block title %}BeatSaber to PowerBeatsVR converter{% endblock %}
+
+{% block navbar %}
+<div class="navbar navbar-fixed-top">
+  <!-- ... -->
+</div>
+{% endblock %}
+
+{% block content %}
+     <a href="https://github.com/guysoft/PowerBeatsVR_song_writer"><img loading="lazy" width="149" height="149" src="https://github.blog/wp-content/uploads/2008/12/forkme_left_green_007200.png?resize=149%2C149" class="attachment-full size-full" alt="Fork me on GitHub" data-recalc-dims="1"></a>
+     <div class="container text-center d-flex align-items-center justify-content-center">
+     <h1>BeatSaber to PowerBeatsVR Converter</h1><br/>
+     <h4>This is a hacked together reverse engineered converter that takes zip files from BeatSaber and convertes them to PowerBeatsVR levels.
+     You can fork improve the code and UI on github</h4>
+     <table><tr><td>
+      <form action = "/uploader" method = "POST" enctype = "multipart/form-data">
+        <div class="form-group">
+        <br/>
+        <label for="file">Beat Saber Map Zip file</label>
+        <input type="file" class="form-control-file" name="file" id="file"><br/>
+         <button type="submit" class="btn btn-primary">Convert</button>
+      </form> 
+      </div>
+      </tr></td></table>
+       </div>
+{% endblock %}
