@@ -214,16 +214,18 @@ class Map():
         return
     
     def get_powerbeatsvr_obstacles(self, bs_obstacle_data, level):
-        for obstacle in bs_note_data["_obstacles"]:
+        for obstacle in bs_obstacle_data["_obstacles"]:
             # print(obstacle)
             self.add_obstacle(level, obstacle)
     
-if __name__ == "__main__":
+def convert_beat_saber_folder(bs_folder, out_folder, difficulty_list=["Easy", "Hard", "ExpertPlus"]):
     # bs_folder = "/home/guy/workspace/PowerBeatsVR/beatsaver_pack/Jaroslav Beck - Beat Saber (Built in)"
-    bs_folder = sys.argv[1]
-    out_folder = sys.argv[2]
-    
     # Load BS data
+    beginner = difficulty_list[0] + ".dat"
+    advanced = difficulty_list[1] + ".dat"
+    expert = difficulty_list[2] + ".dat"
+    
+    
     bs_info_path = os.path.join(bs_folder, 'Info.dat')
     bs_song_file = os.path.join(bs_folder, 'song.ogg')
     
@@ -231,9 +233,9 @@ if __name__ == "__main__":
     
     ensure_dir(out_folder)
     
-    bs_map_easy_path = os.path.join(bs_folder, 'Easy.dat')
-    bs_map_hard_path = os.path.join(bs_folder, 'Hard.dat')
-    bs_map_expert_plus_path = os.path.join(bs_folder, 'ExpertPlus.dat')
+    bs_map_easy_path = os.path.join(bs_folder, beginner)
+    bs_map_hard_path = os.path.join(bs_folder, advanced)
+    bs_map_expert_path = os.path.join(bs_folder, expert)
     
     
     bs_data = bs_lib.get_data(bs_info_path)
@@ -245,7 +247,7 @@ if __name__ == "__main__":
     
     levels_arrange = {bs_map_easy_path: "Beginner",
                       bs_map_hard_path: "Advanced",
-                      bs_map_expert_plus_path: "Expert"}
+                      bs_map_expert_path: "Expert"}
     
     for key in levels_arrange.keys():
         bs_map_path = key
@@ -257,3 +259,7 @@ if __name__ == "__main__":
     with open(out_path,"w") as w:
         json.dump(a.data, w, indent=4, sort_keys=True)
     shutil.copy(bs_song_file, out_song_path)
+    return
+
+if __name__ == "__main__":
+    convert_beat_saber_folder(sys.argv[1], sys.argv[2], ["Easy", "Hard", "ExpertPlus"])
