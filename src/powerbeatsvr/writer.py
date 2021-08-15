@@ -9,6 +9,8 @@ import powerbeatsvr.bs_lib as bs_lib
 import glob
 from powerbeatsvr.bs_lib import NOTE_TYPE, OBSTACLE_TYPE, line_index_layer_to_position, obstacle_line_index_layer_to_position
 
+BS_LEVELS = ["Easy", "Easy", "Hard", "Expert", "ExpertPlusStandard", "ExpertPlus"]
+
 POWER_BEATS_VR_OBSTACLE_TYPES = {"FULL_HEIGHT": 0, "CROUCH": 7}
 
 
@@ -253,7 +255,6 @@ def convert_beat_saber_folder(bs_folder, out_folder, difficulty_list=["Easy", "H
     return bs_data["name"]
 
 def convert_beat_saber_zip(bs_zip, out_folder):
-    levels = ["Easy", "Easy", "Hard", "Expert", "ExpertPlus"]
     
     with tempfile.TemporaryDirectory() as tmpdir:
         print("Temp folder: " + tmpdir)
@@ -261,7 +262,7 @@ def convert_beat_saber_zip(bs_zip, out_folder):
         print(os.listdir(tmpdir))
         avilable_levels = []
         for file_path in os.listdir(tmpdir):
-            if file_path[:-4] in levels:
+            if file_path[:-4] in BS_LEVELS:
                 avilable_levels.append(file_path[:-4])
                 
         if len(avilable_levels) == 0:
