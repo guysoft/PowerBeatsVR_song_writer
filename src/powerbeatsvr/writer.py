@@ -9,7 +9,7 @@ import powerbeatsvr.bs_lib as bs_lib
 import glob
 from powerbeatsvr.bs_lib import NOTE_TYPE, OBSTACLE_TYPE, line_index_layer_to_position, obstacle_line_index_layer_to_position
 
-BS_LEVELS = ["Easy", "Easy", "Hard", "Expert", "ExpertPlusStandard", "ExpertPlus"]
+BS_LEVELS = ["Easy", "NormalStandard", "Normal", "HardStandard", "Hard", "Expert", "ExpertPlusStandard", "ExpertPlus"]
 
 POWER_BEATS_VR_OBSTACLE_TYPES = {"FULL_HEIGHT": 0, "CROUCH": 7}
 
