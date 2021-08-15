@@ -9,4 +9,14 @@ services:
     tty: true
     ports:
       - "80"
+    environment:
+      - VIRTUAL_HOST=powerbeatsvr.gnethomelinux.com
+      - LETSENCRYPT_HOST=powerbeatsvr.gnethomelinux.com
+      - LETSENCRYPT_EMAIL=guysoft@gmail.com
     #entrypoint: /bin/sh
+
+networks:
+  default:
+    external:
+      name: nginx-proxy
+

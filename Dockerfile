@@ -1,4 +1,4 @@
-FROM tiangolo/uwsgi-nginx-flask:python3.8
+FROM guysoft/uwsgi-nginx-flask:python3.8
 MAINTAINER Guy Sheffer <guysoft at gmail dot com>
 
 ENV LISTEN_PORT 80
