@@ -5,6 +5,12 @@ Currently does not work. Because something in the PowerBeatsVR format makes no s
 
 ## Usage
 
+### Website
+There is a website where you can convert downloaded file, its source code is in this repository too so you can request changes:
+https://powerbeatsvr.gnethomelinux.com/
+
+### Commandline
+
 ```
 pip3 install powerbeatsvr
 powerbeatsvr [beat saber zip map] [output folder (created)]
