@@ -24,13 +24,19 @@ def get_data(bs_info_path):
         "author": data["_songAuthorName"]
         }
 
+# The width from each side in the center (the total width is twice this number)
+LEVEL_WITH = 1.1
+# Lowest point in the game map beneeth your center
+LEVEL_LOW = -0.5
+# Highest point in the map
+LEVEL_HIGH = 1.0
 def line_index_layer_to_position(note):
-    # layer 0-2
-    # ndex 0-3
-    # posy = 0.5 - 1.3
-    # posx = -1.3 - 1.3
-    position_x = -1.3  + 0.8 * note["_lineIndex"]
-    position_y = -0.5  + 0.8 * note["_lineLayer"]
+    # beat saber layer moves between 0-2
+    # beat saber index moves between 0-3
+    # max posy in beat saber = 0.5 - 1.0
+    # max posx in beat saber = -1.3 - 1.3
+    position_x = -LEVEL_WITH + (2*LEVEL_WITH/3) * note["_lineIndex"]
+    position_y = LEVEL_LOW + (LEVEL_HIGH - LEVEL_LOW)/2 * note["_lineLayer"]
     return [position_x, position_y]
 
 
