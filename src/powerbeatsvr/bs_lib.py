@@ -48,7 +48,7 @@ def obstacle_line_index_layer_to_position(obstacle):
     
     # Left example
     # position = [-0.976259469985962,-1.29999995231628]
-    position_x = -1.3  + 0.8 * obstacle["_lineIndex"]
+    position_x = -LEVEL_WITH  + (2*LEVEL_WITH/3) * obstacle["_lineIndex"]
     
     # 0.65 because the minimal size of -1.3 + 0.65 * 4 = 1.3
     # position_x2/position_y = position_x + 0.65 * obstacle["_width"]
