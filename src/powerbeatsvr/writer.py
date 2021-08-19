@@ -238,13 +238,13 @@ def convert_beat_saber_folder(bs_folder, out_folder, difficulty_list=["Easy", "H
     
     a = Map(name=bs_data["name"], author=bs_data["author"], bpm=bs_data["bpm"], offset=bs_data["offset"])
     
-    levels_arrange = {bs_map_easy_path: "Beginner",
-                      bs_map_hard_path: "Advanced",
-                      bs_map_expert_path: "Expert"}
+    levels_arrange = {"Beginner": bs_map_easy_path,
+                      "Advanced": bs_map_hard_path,
+                      "Expert": bs_map_expert_path}
     
     for key in levels_arrange.keys():
-        bs_map_path = key
-        difficulty = levels_arrange[key]
+        bs_map_path = levels_arrange[key]
+        difficulty = key
         bs_note_data = bs_lib.get_map_data(bs_map_path)
         a.get_powerbeatsvr_notes(bs_note_data, difficulty)
         a.get_powerbeatsvr_obstacles(bs_note_data, difficulty)
