@@ -107,11 +107,29 @@ class Map():
         # y_position = x_position + width
         
         if bs_type == OBSTACLE_TYPE["CROUCH"]:
-            power_beats_vr_type = POWER_BEATS_VR_OBSTACLE_TYPES["CROUCH"]
-            # Taken from level editor, not sure if there are other ways to generate
-            # hard coded because anyway in beat saber its _lineIndex and width 4
-            position = [0, 0.472493290901184]
-        
+            
+            if width < 4:
+                # This is a crouch wall, but its not going all the way to the end, so we are adding fall hight wall in the air to simulate
+                power_beats_vr_type = POWER_BEATS_VR_OBSTACLE_TYPES["FULL_HEIGHT"]
+                
+                # Take y from normal note location and x from obstacle position
+                # Dummy 0 for now
+                # TODO make this more pretty
+                obstacle["_lineLayer"] = 0
+                position = line_index_layer_to_position(obstacle)
+                position[0], _ = obstacle_line_index_layer_to_position(obstacle)
+                
+            else:
+                # Crouch wall with fall size
+                
+                power_beats_vr_type = POWER_BEATS_VR_OBSTACLE_TYPES["CROUCH"]
+                # print(current_time / 140)
+                
+                
+                # Taken from level editor, not sure if there are other ways to generate
+                # hard coded because anyway in beat saber its _lineIndex and width 4
+                position = [0, 0.472493290901184]
+            
         elif bs_type == OBSTACLE_TYPE["FULL_HEIGHT"]:
             power_beats_vr_type = POWER_BEATS_VR_OBSTACLE_TYPES["FULL_HEIGHT"]
             
