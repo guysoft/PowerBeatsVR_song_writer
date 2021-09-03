@@ -106,6 +106,9 @@ class Map():
         width = obstacle["_width"]
         # y_position = x_position + width
         
+        if depth == 0:
+            return
+        
         if bs_type == OBSTACLE_TYPE["CROUCH"]:
             
             if width < 4:
