@@ -12,6 +12,27 @@ NOTE_TYPE = {"BOMB": 3}
 OBSTACLE_TYPE = {"FULL_HEIGHT": 0,
                  "CROUCH": 1}
 
+VERSION_KEYS = {
+    2:
+    {
+        "_time": "_time",
+        "_lineIndex": "_lineIndex",
+        "_lineLayer": "_lineLayer",
+        "_duration": "_duration",
+        "_width": "_width",
+        "_height": None,
+    },
+    3:
+    {
+        "_time": "b",
+        "_lineIndex": "x",
+        "_lineLayer": "y",
+        "_duration": "d",
+        "_width": "w",
+        "_height": "h",
+    }
+}
+
 
 def get_data(bs_info_path):
     data = None
@@ -30,13 +51,13 @@ LEVEL_WITH = 1.1
 LEVEL_LOW = -0.5
 # Highest point in the map
 LEVEL_HIGH = 1.0
-def line_index_layer_to_position(note):
+def line_index_layer_to_position(note_x, note_y):
     # beat saber layer moves between 0-2
     # beat saber index moves between 0-3
     # max posy in beat saber = 0.5 - 1.0
     # max posx in beat saber = -1.3 - 1.3
-    position_x = -LEVEL_WITH + (2*LEVEL_WITH/3) * note["_lineIndex"]
-    position_y = LEVEL_LOW + (LEVEL_HIGH - LEVEL_LOW)/2 * note["_lineLayer"]
+    position_x = -LEVEL_WITH + (2*LEVEL_WITH/3) *note_x
+    position_y = LEVEL_LOW + (LEVEL_HIGH - LEVEL_LOW)/2 * note_y
     return [position_x, position_y]
 
 

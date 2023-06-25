@@ -7,7 +7,7 @@ from pyunpack import Archive
 import tempfile
 import powerbeatsvr.bs_lib as bs_lib
 import glob
-from powerbeatsvr.bs_lib import NOTE_TYPE, OBSTACLE_TYPE, line_index_layer_to_position, obstacle_line_index_layer_to_position
+from powerbeatsvr.bs_lib import NOTE_TYPE, OBSTACLE_TYPE, VERSION_KEYS, line_index_layer_to_position, obstacle_line_index_layer_to_position
 
 BS_LEVELS = ["Easy", "NormalStandard", "Normal", "HardStandard", "Hard", "Expert", "ExpertStandard", "ExpertPlusStandard", "ExpertPlus"]
 
@@ -50,11 +50,28 @@ def create(name, author="unknown", bpm=140, offset=0):
     return data
 
 def convert_action_type(note):
+    # In verson 2 there is a _type value for bombs and notes
+    # In version 3 its two seprate lists
     if note["_type"] == NOTE_TYPE["BOMB"]:
         action = "BallObstacle"
     else:
         action = "NormalBall"
     return action
+
+def merge_notes_and_bombs_v3(bs_note_data):
+    return_value = []
+    color_notes = []
+    bombs = []
+    for note in bs_note_data["colorNotes"]:
+        note["_type"] = note["c"]
+        color_notes.append(note)
+
+    for bomb in bs_note_data["bombNotes"]:
+        bomb["_type"] = NOTE_TYPE["BOMB"]
+        bombs.append(bomb)
+
+    return_value = color_notes + bombs
+    return sorted(return_value, key=lambda d: d['b'])
 
 class Map():
     def __init__(self, name, author="unknown", bpm=140, offset=0):
@@ -87,8 +104,8 @@ class Map():
                 return i
         return None
 
-    def add_obstacle(self, difficulty, obstacle):
-        current_time = obstacle["_time"]
+    def add_obstacle(self, difficulty, obstacle, version=2):
+        current_time = obstacle[VERSION_KEYS[version]["_time"]]
         current_beat = int(current_time)
         
         # Handle intiger beat, goes in actions
@@ -100,47 +117,72 @@ class Map():
         
         
         # Get obstacle data
-        x_position = obstacle["_lineIndex"]
-        bs_type = obstacle["_type"]
-        depth = obstacle["_duration"]
-        width = obstacle["_width"]
+        x_position = obstacle[VERSION_KEYS[version]["_lineIndex"]]
+
+        bs_type = None
+        if version == 2:
+            bs_type = obstacle["_type"]
+        depth = obstacle[VERSION_KEYS[version]["_duration"]]
+        width = obstacle[VERSION_KEYS[version]["_width"]]
         # y_position = x_position + width
         
         if depth == 0:
             return
         
-        if bs_type == OBSTACLE_TYPE["CROUCH"]:
-            
-            if width < 4:
-                # This is a crouch wall, but its not going all the way to the end, so we are adding fall hight wall in the air to simulate
+        if version == 2:
+            if bs_type == OBSTACLE_TYPE["CROUCH"]:
+                
+                if width < 4:
+                    # This is a crouch wall, but its not going all the way to the end, so we are adding fall hight wall in the air to simulate
+                    power_beats_vr_type = POWER_BEATS_VR_OBSTACLE_TYPES["FULL_HEIGHT"]
+                    
+                    # Take y from normal note location and x from obstacle position
+                    # Dummy 0 for now
+                    # TODO make this more pretty
+                    obstacle["_lineLayer"] = 0
+                    position = line_index_layer_to_position(obstacle)
+                    position[0], _ = obstacle_line_index_layer_to_position(obstacle)
+                    
+                else:
+                    # Crouch wall with fall size
+                    
+                    power_beats_vr_type = POWER_BEATS_VR_OBSTACLE_TYPES["CROUCH"]
+                    # print(current_time / 140)
+                    
+                    
+                    # Taken from level editor, not sure if there are other ways to generate
+                    # hard coded because anyway in beat saber its _lineIndex and width 4
+                    position = [0, 0.472493290901184]
+                
+            elif bs_type == OBSTACLE_TYPE["FULL_HEIGHT"]:
                 power_beats_vr_type = POWER_BEATS_VR_OBSTACLE_TYPES["FULL_HEIGHT"]
                 
-                # Take y from normal note location and x from obstacle position
-                # Dummy 0 for now
-                # TODO make this more pretty
-                obstacle["_lineLayer"] = 0
-                position = line_index_layer_to_position(obstacle)
-                position[0], _ = obstacle_line_index_layer_to_position(obstacle)
-                
+                position = obstacle_line_index_layer_to_position(obstacle)
             else:
-                # Crouch wall with fall size
-                
+                print("ERROR: Unknown wall type")
+                exit(1)
+            self.add_wall(current_time, position, difficulty, beat_index, power_beats_vr_type, depth, current_beat)
+
+        elif version == 3:
+            height = obstacle[VERSION_KEYS[version]["_height"]]
+            y_position = obstacle[VERSION_KEYS[version]["_lineLayer"]]
+
+            position = line_index_layer_to_position(x_position, y_position)
+
+            if height == 1 and width > 2:
+                power_beats_vr_type = POWER_BEATS_VR_OBSTACLE_TYPES["FULL_HEIGHT"]
+
+                self.add_wall(current_time, position, difficulty, beat_index, power_beats_vr_type, depth, current_beat)
+
+            elif width == 1 and height > 2:
                 power_beats_vr_type = POWER_BEATS_VR_OBSTACLE_TYPES["CROUCH"]
-                # print(current_time / 140)
-                
-                
-                # Taken from level editor, not sure if there are other ways to generate
-                # hard coded because anyway in beat saber its _lineIndex and width 4
-                position = [0, 0.472493290901184]
-            
-        elif bs_type == OBSTACLE_TYPE["FULL_HEIGHT"]:
-            power_beats_vr_type = POWER_BEATS_VR_OBSTACLE_TYPES["FULL_HEIGHT"]
-            
-            position = obstacle_line_index_layer_to_position(obstacle)
-        else:
-            print("ERROR: Unknown wall type")
-            exit(1)
-            
+                self.add_wall(current_time, position, difficulty, beat_index, power_beats_vr_type, depth, current_beat)
+
+            else:
+                print(f"Warning: Detected wall type that is not implemented width or height larger than 1 {[width, height]} location: {[x_position, y_position]}")
+
+
+    def add_wall(self, current_time, position, difficulty, beat_index, power_beats_vr_type, depth, current_beat):
         if current_time % 1 == 0.0:
             self.data[difficulty]["beats"][beat_index]["actions"].append({
                 "position" : position,
@@ -169,11 +211,11 @@ class Map():
 
         return
 
-    def add_note(self, difficulty, note):
-        current_time = note["_time"]
+    def add_note(self, difficulty, note, version=2):
+        current_time = note[VERSION_KEYS[version]["_time"]]
         current_beat = int(current_time)
         
-        # Handle intiger beat, goes in actions
+        # Handle intager beat, goes in actions
         beat_index = self.get_beat(current_beat, difficulty)
             
         if beat_index is None:
@@ -181,11 +223,13 @@ class Map():
         beat_index = self.get_beat(current_beat, difficulty)
         
         
-        # Get obstacle data
-        x_position = note["_lineIndex"]
-        bs_type = note["_type"]
+        # Get notes data
+        x_position = note[VERSION_KEYS[version]["_lineIndex"]]
+
         action = convert_action_type(note)
-        position = line_index_layer_to_position(note)
+        note_x = note[VERSION_KEYS[version]["_lineIndex"]]
+        note_y = note[VERSION_KEYS[version]["_lineLayer"]]
+        position = line_index_layer_to_position(note_x, note_y)
             
         if current_time % 1 == 0.0:
             self.data[difficulty]["beats"][beat_index]["actions"].append({
@@ -208,18 +252,56 @@ class Map():
                 "position" : position,
                 "action" : action
                 })
-
-        return                
-        
-    def get_powerbeatsvr_notes(self, bs_note_data, level):
-        for note in bs_note_data["_notes"]:
-            self.add_note(level, note)
         return
-    
-    def get_powerbeatsvr_obstacles(self, bs_obstacle_data, level):
+
+
+    def get_map_version(self, bs_note_data):
+        version = bs_note_data.get("_version", None)
+        if version is not None:
+            return version
+        version = bs_note_data.get("version", None)
+        return version
+
+    def get_powerbeatsvr_notes_v3(self, bs_note_data, level):
+        notes_bombs = merge_notes_and_bombs_v3(bs_note_data)
+
+        for note in notes_bombs:
+            self.add_note(level, note, 3)
+        return
+        
+    def get_powerbeatsvr_notes_v2(self, bs_note_data, level):
+        for note in bs_note_data["_notes"]:
+            self.add_note(level, note, 2)
+        return
+
+    def get_powerbeatsvr_obstacles_v3(self, bs_note_data, level):
+        for obstacle in bs_note_data["obstacles"]:
+            self.add_obstacle(level, obstacle, 3)
+        return
+
+    def get_powerbeatsvr_obstacles_v2(self, bs_obstacle_data, level):
         for obstacle in bs_obstacle_data["_obstacles"]:
             # print(obstacle)
-            self.add_obstacle(level, obstacle)
+            self.add_obstacle(level, obstacle, 2)
+
+
+    def get_powerbeatsvr_notes(self, bs_note_data, level):
+        if self.get_map_version(bs_note_data) == "2.0.0":
+            return self.get_powerbeatsvr_notes_v2(bs_note_data, level)
+        elif self.get_map_version(bs_note_data).startswith("3."):
+            return self.get_powerbeatsvr_notes_v3(bs_note_data, level)
+        else:
+            raise Exception("unknown map version")
+        return
+
+    def get_powerbeatsvr_obstacles(self, bs_note_data, level):
+        if self.get_map_version(bs_note_data) == "2.0.0":
+            return self.get_powerbeatsvr_obstacles_v2(bs_note_data, level)
+        elif self.get_map_version(bs_note_data).startswith("3."):
+            return self.get_powerbeatsvr_obstacles_v3(bs_note_data, level)
+        else:
+            raise Exception("unknown map version")
+        return
             
 def get_bs_info_path(folder):
     options = ["Info.dat", "info.dat"]
