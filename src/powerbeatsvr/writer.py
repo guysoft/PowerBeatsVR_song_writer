@@ -11,7 +11,16 @@ from powerbeatsvr.bs_lib import NOTE_TYPE, OBSTACLE_TYPE, VERSION_KEYS, line_ind
 
 BS_LEVELS = ["Easy", "NormalStandard", "Normal", "HardStandard", "Hard", "Expert", "ExpertStandard", "ExpertPlusStandard", "ExpertPlus"]
 
-POWER_BEATS_VR_OBSTACLE_TYPES = {"FULL_HEIGHT": 0, "CROUCH": 7}
+POWER_BEATS_VR_OBSTACLE_TYPES = {
+    "FULL_HEIGHT": 0,
+    "CROUCH": 7,
+    "Double_Column": 1,
+    "Archway Center": 2,
+    "Archway Left": 3,
+    "Archway Right": 4,
+    "Opening Left": 5,
+    "Opening Right": 6,
+    }
 
 
 def ensure_dir(d, chmod=0o777):
@@ -170,12 +179,12 @@ class Map():
             position = line_index_layer_to_position(x_position, y_position)
 
             if height == 1 and width > 2:
-                power_beats_vr_type = POWER_BEATS_VR_OBSTACLE_TYPES["FULL_HEIGHT"]
+                power_beats_vr_type = POWER_BEATS_VR_OBSTACLE_TYPES["CROUCH"]
 
                 self.add_wall(current_time, position, difficulty, beat_index, power_beats_vr_type, depth, current_beat)
 
             elif width == 1 and height > 2:
-                power_beats_vr_type = POWER_BEATS_VR_OBSTACLE_TYPES["CROUCH"]
+                power_beats_vr_type = POWER_BEATS_VR_OBSTACLE_TYPES["FULL_HEIGHT"]
                 self.add_wall(current_time, position, difficulty, beat_index, power_beats_vr_type, depth, current_beat)
 
             else:
