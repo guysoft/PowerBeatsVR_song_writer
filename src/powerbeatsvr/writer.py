@@ -149,7 +149,7 @@ class Map():
                     # Dummy 0 for now
                     # TODO make this more pretty
                     obstacle["_lineLayer"] = 0
-                    position = line_index_layer_to_position(obstacle)
+                    position = line_index_layer_to_position(obstacle["_lineIndex"], obstacle["_lineLayer"])
                     position[0], _ = obstacle_line_index_layer_to_position(obstacle)
                     
                 else:
@@ -295,18 +295,20 @@ class Map():
 
 
     def get_powerbeatsvr_notes(self, bs_note_data, level):
-        if self.get_map_version(bs_note_data) == "2.0.0":
+        version = self.get_map_version(bs_note_data)
+        if version is not None and version.startswith("2."):
             return self.get_powerbeatsvr_notes_v2(bs_note_data, level)
-        elif self.get_map_version(bs_note_data).startswith("3."):
+        elif version is not None and version.startswith("3."):
             return self.get_powerbeatsvr_notes_v3(bs_note_data, level)
         else:
             raise Exception("unknown map version")
         return
 
     def get_powerbeatsvr_obstacles(self, bs_note_data, level):
-        if self.get_map_version(bs_note_data) == "2.0.0":
+        version = self.get_map_version(bs_note_data)
+        if version is not None and version.startswith("2."):
             return self.get_powerbeatsvr_obstacles_v2(bs_note_data, level)
-        elif self.get_map_version(bs_note_data).startswith("3."):
+        elif version is not None and version.startswith("3."):
             return self.get_powerbeatsvr_obstacles_v3(bs_note_data, level)
         else:
             raise Exception("unknown map version")
@@ -366,16 +368,36 @@ def convert_beat_saber_folder(bs_folder, out_folder, difficulty_list=["Easy", "H
     shutil.copy(bs_song_file, out_song_path)
     return bs_data["name"]
 
+def find_map_root(folder):
+    """
+    BeatSaver wraps the map files in a single top level folder
+    ("<hash>/Info.dat"), while older zips are flat. Descend into the
+    single sub folder until the level files are found.
+    """
+    root = folder
+    for _ in range(3):
+        if any(os.path.splitext(name)[0] in BS_LEVELS for name in os.listdir(root)):
+            return root
+        sub_dirs = [name for name in os.listdir(root)
+                    if name != "__MACOSX" and os.path.isdir(os.path.join(root, name))]
+        if len(sub_dirs) != 1:
+            return root
+        root = os.path.join(root, sub_dirs[0])
+    return root
+
+
 def convert_beat_saber_zip(bs_zip, out_folder):
     
     with tempfile.TemporaryDirectory() as tmpdir:
         print("Temp folder: " + tmpdir)
         Archive(bs_zip).extractall(tmpdir)
         print(os.listdir(tmpdir))
+        map_root = find_map_root(tmpdir)
+        print("Map root: " + map_root)
         avilable_levels = []
-        for file_path in os.listdir(tmpdir):
-            if file_path[:-4] in BS_LEVELS:
-                avilable_levels.append(file_path[:-4])
+        for file_path in os.listdir(map_root):
+            if os.path.splitext(file_path)[0] in BS_LEVELS:
+                avilable_levels.append(os.path.splitext(file_path)[0])
                 
         if len(avilable_levels) == 0:
             raise Exception("No levels found in package")
@@ -390,7 +412,7 @@ def convert_beat_saber_zip(bs_zip, out_folder):
             # More than 3
             difficulty_list = [avilable_levels[0], avilable_levels[1], avilable_levels[2]]
             
-        return_value = convert_beat_saber_folder(tmpdir, out_folder, difficulty_list)
+        return_value = convert_beat_saber_folder(map_root, out_folder, difficulty_list)
     
     return return_value
 

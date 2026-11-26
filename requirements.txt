@@ -1,3 +1,3 @@
-pyunpack
-flask
-flask-bootstrap
+pyunpack>=0.3
+flask>=3.1,<4
+gunicorn>=23

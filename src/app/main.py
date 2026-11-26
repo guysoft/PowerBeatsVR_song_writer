@@ -1,14 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env python3
 import os
-from flask import Flask, render_template, request, send_from_directory
-from flask_bootstrap import Bootstrap
-from werkzeug.utils import secure_filename
-from werkzeug.datastructures import  FileStorage
-from powerbeatsvr.writer import ensure_dir, convert_beat_saber_zip
 import tempfile
 
+from flask import Flask, render_template, request, send_from_directory
+from werkzeug.utils import secure_filename
+
+from powerbeatsvr.writer import ensure_dir, convert_beat_saber_zip
+
 app = Flask(__name__)
-Bootstrap(app)
 
 SAVE_FOLDER = os.path.join(os.path.dirname(__file__), "uploads")
 SHARE_FOLDER = os.path.join(os.path.dirname(__file__), "static", "downloads")
