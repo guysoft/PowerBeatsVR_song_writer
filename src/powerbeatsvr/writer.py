@@ -7,9 +7,18 @@ from pyunpack import Archive
 import tempfile
 import powerbeatsvr.bs_lib as bs_lib
 import glob
-from powerbeatsvr.bs_lib import NOTE_TYPE, OBSTACLE_TYPE, VERSION_KEYS, line_index_layer_to_position, obstacle_line_index_layer_to_position
+from powerbeatsvr.bs_lib import NOTE_TYPE, OBSTACLE_TYPE, VERSION_KEYS, line_index_layer_to_position, obstacle_line_index_layer_to_position, beats_to_seconds, get_bpm_segments, get_difficulty_files, get_info, is_v4_info
 
 BS_LEVELS = ["Easy", "NormalStandard", "Normal", "HardStandard", "Hard", "Expert", "ExpertStandard", "ExpertPlusStandard", "ExpertPlus"]
+
+# Lowest to highest, used to pick which difficulties to convert (v4)
+DIFFICULTY_ORDER = ["Easy", "Normal", "Hard", "Expert", "ExpertPlus"]
+
+
+def sort_difficulties(names):
+    def rank(name):
+        return DIFFICULTY_ORDER.index(name) if name in DIFFICULTY_ORDER else len(DIFFICULTY_ORDER)
+    return sorted(names, key=rank)
 
 POWER_BEATS_VR_OBSTACLE_TYPES = {
     "FULL_HEIGHT": 0,
@@ -82,9 +91,59 @@ def merge_notes_and_bombs_v3(bs_note_data):
     return_value = color_notes + bombs
     return sorted(return_value, key=lambda d: d['b'])
 
+
+def expand_notes_v4(bs_note_data, field, data_field, segments=None, bpm=0):
+    """
+    v4 keeps the timing in "colorNotes"/"bombNotes"/"obstacles" and the
+    rest of each object (x/y/c/d/w/h) in a parallel "*Data" array, joined
+    by the "i" index. Returns the merged objects with "b" in seconds.
+    """
+    data = bs_note_data.get(data_field) or []
+    expanded = []
+    for entry in bs_note_data.get(field) or []:
+        index = entry.get("i")
+        if index is None or index >= len(data):
+            continue
+        item = dict(data[index])
+        item["b"] = beats_to_seconds(entry["b"], segments, bpm)
+        expanded.append(item)
+    return expanded
+
+
+def merge_notes_and_bombs_v4(bs_note_data, segments=None, bpm=0):
+    return_value = []
+    for note in expand_notes_v4(bs_note_data, "colorNotes", "colorNotesData", segments, bpm):
+        note["_type"] = note["c"]
+        return_value.append(note)
+    for bomb in expand_notes_v4(bs_note_data, "bombNotes", "bombNotesData", segments, bpm):
+        bomb["_type"] = NOTE_TYPE["BOMB"]
+        return_value.append(bomb)
+    return sorted(return_value, key=lambda d: d['b'])
+
+
+def get_obstacles_v4(bs_note_data, segments=None, bpm=0):
+    data = bs_note_data.get("obstaclesData") or []
+    obstacles = []
+    for entry in bs_note_data.get("obstacles") or []:
+        index = entry.get("i")
+        if index is None or index >= len(data):
+            continue
+        obstacle = dict(data[index])
+        start_beat = entry["b"]
+        duration_beats = obstacle.get("d") or 0
+        start_seconds = beats_to_seconds(start_beat, segments, bpm)
+        end_seconds = beats_to_seconds(start_beat + duration_beats, segments, bpm)
+        obstacle["b"] = start_seconds
+        obstacle["d"] = end_seconds - start_seconds
+        obstacles.append(obstacle)
+    return obstacles
+
+
 class Map():
-    def __init__(self, name, author="unknown", bpm=140, offset=0):
+    def __init__(self, name, author="unknown", bpm=140, offset=0, segments=None):
         self.data = create(name, author=author, bpm=bpm, offset=offset)
+        self.bpm = bpm
+        self.segments = segments or []
     
     def add_beat(self, difficulty, beat_no, actions, sub_beats=[]):
         beat = {
@@ -294,14 +353,26 @@ class Map():
             self.add_obstacle(level, obstacle, 2)
 
 
+    def get_powerbeatsvr_notes_v4(self, bs_note_data, level):
+        for note in merge_notes_and_bombs_v4(bs_note_data, self.segments, self.bpm):
+            self.add_note(level, note, 3)
+        return
+
     def get_powerbeatsvr_notes(self, bs_note_data, level):
         version = self.get_map_version(bs_note_data)
         if version is not None and version.startswith("2."):
             return self.get_powerbeatsvr_notes_v2(bs_note_data, level)
         elif version is not None and version.startswith("3."):
             return self.get_powerbeatsvr_notes_v3(bs_note_data, level)
+        elif version is not None and version.startswith("4."):
+            return self.get_powerbeatsvr_notes_v4(bs_note_data, level)
         else:
             raise Exception("unknown map version")
+        return
+
+    def get_powerbeatsvr_obstacles_v4(self, bs_note_data, level):
+        for obstacle in get_obstacles_v4(bs_note_data, self.segments, self.bpm):
+            self.add_obstacle(level, obstacle, 3)
         return
 
     def get_powerbeatsvr_obstacles(self, bs_note_data, level):
@@ -310,6 +381,8 @@ class Map():
             return self.get_powerbeatsvr_obstacles_v2(bs_note_data, level)
         elif version is not None and version.startswith("3."):
             return self.get_powerbeatsvr_obstacles_v3(bs_note_data, level)
+        elif version is not None and version.startswith("4."):
+            return self.get_powerbeatsvr_obstacles_v4(bs_note_data, level)
         else:
             raise Exception("unknown map version")
         return
@@ -328,29 +401,35 @@ def get_bs_song_path(folder):
     
 def convert_beat_saber_folder(bs_folder, out_folder, difficulty_list=["Easy", "Hard", "ExpertPlus"]):
     # bs_folder = "/home/guy/workspace/PowerBeatsVR/beatsaver_pack/Jaroslav Beck - Beat Saber (Built in)"
-    # Load BS data
-    beginner = difficulty_list[0] + ".dat"
-    advanced = difficulty_list[1] + ".dat"
-    expert = difficulty_list[2] + ".dat"
-    
     bs_info_path = get_bs_info_path(bs_folder)
+    bs_info = get_info(bs_info_path)
+    is_v4 = is_v4_info(bs_info)
+    # In v4 the difficulty file names are only known from Info.dat
+    difficulty_files = get_difficulty_files(bs_info) if is_v4 else {}
+    # v4 timings are in beats, convert them with the song tempo
+    segments = get_bpm_segments(bs_folder, bs_info) if is_v4 else []
+
+    def difficulty_path(name):
+        return os.path.join(bs_folder, difficulty_files.get(name, name + ".dat"))
+
     bs_song_file = get_bs_song_path(bs_folder)
-    
+
     # out_folder = "/tmp/out"
-    
+
     ensure_dir(out_folder)
-    
-    bs_map_easy_path = os.path.join(bs_folder, beginner)
-    bs_map_hard_path = os.path.join(bs_folder, advanced)
-    bs_map_expert_path = os.path.join(bs_folder, expert)
-    
-    
-    bs_data = bs_lib.get_data(bs_info_path)
-    
+
+    bs_map_easy_path = difficulty_path(difficulty_list[0])
+    bs_map_hard_path = difficulty_path(difficulty_list[1])
+    bs_map_expert_path = difficulty_path(difficulty_list[2])
+
+
+    bs_data = bs_lib.get_data_from_info(bs_info)
+
     out_path = os.path.join(out_folder, bs_data["name"] + ".json")
     out_song_path = os.path.join(out_folder, bs_data["name"] + ".ogg")
-    
-    a = Map(name=bs_data["name"], author=bs_data["author"], bpm=bs_data["bpm"], offset=bs_data["offset"])
+
+    a = Map(name=bs_data["name"], author=bs_data["author"], bpm=bs_data["bpm"], offset=bs_data["offset"], segments=segments)
+
     
     levels_arrange = {"Beginner": bs_map_easy_path,
                       "Advanced": bs_map_hard_path,
@@ -376,7 +455,9 @@ def find_map_root(folder):
     """
     root = folder
     for _ in range(3):
-        if any(os.path.splitext(name)[0] in BS_LEVELS for name in os.listdir(root)):
+        names = os.listdir(root)
+        has_info = any(name.lower() == "info.dat" for name in names)
+        if has_info or any(os.path.splitext(name)[0] in BS_LEVELS for name in names):
             return root
         sub_dirs = [name for name in os.listdir(root)
                     if name != "__MACOSX" and os.path.isdir(os.path.join(root, name))]
@@ -384,6 +465,17 @@ def find_map_root(folder):
             return root
         root = os.path.join(root, sub_dirs[0])
     return root
+
+
+def get_available_levels(map_root):
+    info_path = get_bs_info_path(map_root)
+    info_data = get_info(info_path) if info_path else None
+    if info_data is not None and is_v4_info(info_data):
+        difficulty_files = get_difficulty_files(info_data)
+        return sort_difficulties([name for name, filename in difficulty_files.items()
+                                  if os.path.isfile(os.path.join(map_root, filename))])
+    return [os.path.splitext(name)[0] for name in os.listdir(map_root)
+            if os.path.splitext(name)[0] in BS_LEVELS]
 
 
 def convert_beat_saber_zip(bs_zip, out_folder):
@@ -394,10 +486,7 @@ def convert_beat_saber_zip(bs_zip, out_folder):
         print(os.listdir(tmpdir))
         map_root = find_map_root(tmpdir)
         print("Map root: " + map_root)
-        avilable_levels = []
-        for file_path in os.listdir(map_root):
-            if os.path.splitext(file_path)[0] in BS_LEVELS:
-                avilable_levels.append(os.path.splitext(file_path)[0])
+        avilable_levels = get_available_levels(map_root)
                 
         if len(avilable_levels) == 0:
             raise Exception("No levels found in package")
