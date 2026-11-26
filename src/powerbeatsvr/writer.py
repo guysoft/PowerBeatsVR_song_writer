@@ -295,18 +295,20 @@ class Map():
 
 
     def get_powerbeatsvr_notes(self, bs_note_data, level):
-        if self.get_map_version(bs_note_data) == "2.0.0":
+        version = self.get_map_version(bs_note_data)
+        if version is not None and version.startswith("2."):
             return self.get_powerbeatsvr_notes_v2(bs_note_data, level)
-        elif self.get_map_version(bs_note_data).startswith("3."):
+        elif version is not None and version.startswith("3."):
             return self.get_powerbeatsvr_notes_v3(bs_note_data, level)
         else:
             raise Exception("unknown map version")
         return
 
     def get_powerbeatsvr_obstacles(self, bs_note_data, level):
-        if self.get_map_version(bs_note_data) == "2.0.0":
+        version = self.get_map_version(bs_note_data)
+        if version is not None and version.startswith("2."):
             return self.get_powerbeatsvr_obstacles_v2(bs_note_data, level)
-        elif self.get_map_version(bs_note_data).startswith("3."):
+        elif version is not None and version.startswith("3."):
             return self.get_powerbeatsvr_obstacles_v3(bs_note_data, level)
         else:
             raise Exception("unknown map version")
