@@ -149,7 +149,7 @@ class Map():
                     # Dummy 0 for now
                     # TODO make this more pretty
                     obstacle["_lineLayer"] = 0
-                    position = line_index_layer_to_position(obstacle)
+                    position = line_index_layer_to_position(obstacle["_lineIndex"], obstacle["_lineLayer"])
                     position[0], _ = obstacle_line_index_layer_to_position(obstacle)
                     
                 else:
